@@ -1,0 +1,447 @@
+/* @theme aedis */
+/* Aedis CTO pitch theme — Apple HIG inspired, oklch palette matching revamp/src/tokens.css */
+
+@import-theme 'default';
+
+:root {
+  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Aedis palette — oklch */
+  --bg: oklch(0.990 0.002 250);
+  --bg-sunk: oklch(0.970 0.003 250);
+  --surface: oklch(1.000 0 0);
+  --surface-2: oklch(0.980 0.003 250);
+  --line: oklch(0.925 0.004 250);
+  --line-soft: oklch(0.955 0.003 250);
+  --ink-1: oklch(0.200 0.010 250);
+  --ink-2: oklch(0.360 0.010 250);
+  --ink-3: oklch(0.540 0.008 250);
+  --ink-4: oklch(0.580 0.006 250);
+  --ink-on-accent: #ffffff;
+  --accent: oklch(0.620 0.160 258);
+  --accent-weak: oklch(0.955 0.035 258);
+  --red: oklch(0.620 0.200 25);
+  --amber: oklch(0.750 0.150 75);
+  --green: oklch(0.620 0.130 155);
+  --violet: oklch(0.600 0.160 290);
+
+  /* Domain accents */
+  --domain-clinical: oklch(.58 .14 350);
+  --domain-finance: oklch(.62 .12 250);
+  --domain-workforce: oklch(.58 .12 258);
+  --domain-quality: oklch(.58 .14 290);
+}
+
+section {
+  background: var(--bg);
+  color: var(--ink-1);
+  font-family: var(--font-text);
+  font-size: 22px;
+  line-height: 1.4;
+  padding: 56px 72px 60px;
+  letter-spacing: -0.005em;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* 16:9 with classic MARP override */
+section.title {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, oklch(0.97 0.04 258 / 0.6), transparent 60%),
+    radial-gradient(ellipse 70% 50% at 90% 90%, oklch(0.97 0.03 290 / 0.4), transparent 60%),
+    var(--bg);
+  justify-content: center;
+}
+
+section.title h1 {
+  font-family: var(--font-display);
+  font-size: 96px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.0;
+  margin: 0 0 24px 0;
+  color: var(--ink-1);
+}
+
+section.title h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--ink-3);
+  letter-spacing: -0.005em;
+  margin: 0 0 8px 0;
+  border: none;
+}
+
+section.title .meta {
+  margin-top: 56px;
+  font-size: 16px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+section h1 {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  margin: 0 0 6px 0;
+  color: var(--ink-1);
+  line-height: 1.05;
+}
+
+section h2 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink-3);
+  letter-spacing: -0.005em;
+  margin: 0 0 22px 0;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+section h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink-1);
+  margin: 16px 0 6px 0;
+  letter-spacing: -0.005em;
+}
+
+section h4 {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-4);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 16px 0 6px 0;
+}
+
+section p, section li {
+  font-size: 17px;
+  color: var(--ink-2);
+  line-height: 1.45;
+  letter-spacing: -0.003em;
+}
+
+section strong {
+  color: var(--ink-1);
+  font-weight: 600;
+}
+
+section em {
+  font-style: normal;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+section ul, section ol {
+  padding-left: 22px;
+  margin: 6px 0 12px;
+}
+
+section li {
+  margin-bottom: 5px;
+}
+
+section li::marker {
+  color: var(--ink-4);
+}
+
+/* Code styling */
+section code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 6px;
+  color: var(--ink-1);
+}
+
+section pre {
+  background: var(--bg-sunk);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-x: auto;
+}
+
+section pre code {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+/* Tables — for compliance / credentials matrices */
+section table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin: 8px 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+section th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+section td {
+  padding: 8px 12px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--ink-2);
+  vertical-align: top;
+}
+
+/* Custom utility containers via fenced HTML */
+section .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: var(--accent-weak);
+  color: var(--accent);
+  border: 1px solid color-mix(in oklab, var(--accent) 25%, transparent);
+}
+section .pill.red { background: oklch(0.965 0.040 25); color: var(--red); border-color: color-mix(in oklab, var(--red) 25%, transparent); }
+section .pill.amber { background: oklch(0.970 0.045 85); color: oklch(0.50 0.130 75); border-color: color-mix(in oklab, var(--amber) 25%, transparent); }
+section .pill.green { background: oklch(0.965 0.040 155); color: var(--green); border-color: color-mix(in oklab, var(--green) 25%, transparent); }
+section .pill.violet { background: oklch(0.965 0.045 290); color: var(--violet); border-color: color-mix(in oklab, var(--violet) 25%, transparent); }
+section .pill.ink { background: var(--surface-2); color: var(--ink-2); border-color: var(--line); }
+
+section .grid {
+  display: grid;
+  gap: 12px;
+  margin: 8px 0;
+}
+section .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+section .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+section .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+section .card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 0 var(--line-soft);
+}
+
+section .card .label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 600;
+  margin: 0 0 6px 0;
+}
+
+section .card .value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink-1);
+  font-family: var(--font-display);
+  margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
+}
+
+section .card .body {
+  font-size: 13px;
+  color: var(--ink-3);
+  line-height: 1.4;
+}
+
+section .card ul, section .card ol {
+  margin: 4px 0 0 0;
+}
+
+section .card li {
+  font-size: 14px;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+section .card h3 {
+  font-size: 15px;
+  margin: 0 0 6px 0;
+}
+
+section .card pre {
+  margin: 0;
+  font-size: 11px;
+}
+
+section .card pre code {
+  font-size: 11px;
+}
+
+section .row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+section .stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+section .footnote {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 10px;
+  line-height: 1.45;
+}
+
+section .citations {
+  margin-top: 10px;
+  font-size: 10px;
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+section .quote {
+  border-left: 3px solid var(--accent);
+  padding: 8px 0 8px 18px;
+  margin: 16px 0;
+  font-size: 22px;
+  color: var(--ink-1);
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Diagram blocks */
+section .arch {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+section .arch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+section .arch-row .layer-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  min-width: 90px;
+}
+
+section .arch-row .layer-content {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* video clip embedded inline (HyperFrames output) */
+section video.motion {
+  width: 100%;
+  max-width: 880px;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  box-shadow: 0 2px 8px rgba(16,18,22,.06), 0 12px 40px rgba(16,18,22,.08);
+  display: block;
+  margin: 6px auto;
+  background: var(--bg-sunk);
+}
+
+section svg.diagram {
+  width: 100%;
+  max-width: 1080px;
+  display: block;
+  margin: 8px auto;
+}
+
+/* Page numbers */
+section::after {
+  content: attr(data-marpit-pagination) " / " attr(data-marpit-pagination-total);
+  font-family: var(--font-mono);
+  color: var(--ink-4);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  position: absolute;
+  bottom: 24px;
+  right: 32px;
+}
+
+/* Hide pagination on title slide */
+section.title::after { display: none; }
+section.qa::after { display: none; }
+
+/* Q&A slide */
+section.qa {
+  background:
+    radial-gradient(ellipse 70% 50% at 80% 20%, oklch(0.97 0.04 258 / 0.5), transparent 60%),
+    var(--bg);
+  justify-content: center;
+}
+section.qa h1 {
+  font-size: 96px;
+  letter-spacing: -0.04em;
+  margin-bottom: 24px;
+}
+section.qa .meta {
+  font-size: 18px;
+  color: var(--ink-3);
+}
+
+/* Header band on content slides */
+section.content::before {
+  content: "AEDIS · CTO PITCH";
+  position: absolute;
+  top: 18px;
+  left: 72px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: var(--ink-4);
+  font-weight: 600;
+}

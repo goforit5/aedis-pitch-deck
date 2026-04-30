@@ -1,0 +1,21 @@
+{
+  "name": "aedis-pitch-deck",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aedis CTO pitch — MARP slides + HyperFrames motion clips for Ensign Group tech team.",
+  "scripts": {
+    "build:slides": "marp slides.md --html --allow-local-files --theme assets/theme.css --output dist/aedis-pitch.html",
+    "build:pdf": "marp slides.md --pdf --allow-local-files --theme assets/theme.css --output dist/aedis-pitch.pdf",
+    "build:motion": "node scripts/build-motion.mjs",
+    "build": "npm run build:motion && npm run build:slides && npm run build:pdf && node scripts/copy-assets.mjs",
+    "preview": "marp slides.md --preview --html --allow-local-files --theme assets/theme.css",
+    "watch": "marp slides.md --watch --html --allow-local-files --theme assets/theme.css --output dist/aedis-pitch.html",
+    "clean": "rm -rf dist && mkdir -p dist"
+  },
+  "devDependencies": {
+    "@marp-team/marp-cli": "^4.3.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

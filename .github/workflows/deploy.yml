@@ -1,0 +1,86 @@
+# Build the MARP deck and HyperFrames motion clips, then deploy to GitHub Pages.
+# This workflow only runs on push to main and on manual dispatch. It uses no
+# user-controlled inputs (issue titles, PR bodies, commit messages) in any
+# `run:` block, so command injection is not a concern.
+name: Build & deploy deck to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build slides + motion
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Install FFmpeg + Chrome libs
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            ffmpeg \
+            libnss3 libxss1 libasound2t64 libgbm1 libxshmfence1 \
+            fonts-liberation libdrm2 libxkbcommon0 libxcomposite1 \
+            libxdamage1 libxrandr2 libxfixes3 libpango-1.0-0 \
+            libcairo2 libatk-bridge2.0-0 libatk1.0-0 libcups2
+
+      # Reuse the rendered MP4 if motion sources are unchanged. Saves ~3 minutes per CI run.
+      - name: Cache motion renders
+        id: motion-cache
+        uses: actions/cache@v4
+        with:
+          path: motion/dist
+          key: motion-${{ runner.os }}-${{ hashFiles('motion/**/index.html', 'motion/**/*.html') }}-v1
+
+      - name: Render motion (HyperFrames)
+        if: steps.motion-cache.outputs.cache-hit != 'true'
+        run: npm run build:motion
+        env:
+          CI: "true"
+
+      - name: Build slides (MARP HTML + PDF)
+        run: |
+          npm run build:slides
+          npm run build:pdf
+          node scripts/copy-assets.mjs
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

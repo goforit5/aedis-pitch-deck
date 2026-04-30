@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Aedis · PHI Tokenization Boundary</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        font-family: "Inter", system-ui, sans-serif;
+        background: oklch(0.990 0.002 250);
+        color: oklch(0.200 0.010 250);
+        letter-spacing: -0.005em;
+      }
+
+      #stage {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: oklch(0.990 0.002 250);
+      }
+
+      /* Soft brand glow at top-left and bottom-right */
+      .glow-bg-1 {
+        position: absolute;
+        top: -200px;
+        left: -150px;
+        width: 1100px;
+        height: 800px;
+        border-radius: 50%;
+        background: radial-gradient(ellipse, oklch(0.97 0.04 258 / 0.55), transparent 65%);
+        pointer-events: none;
+      }
+      .glow-bg-2 {
+        position: absolute;
+        bottom: -200px;
+        right: -150px;
+        width: 1000px;
+        height: 700px;
+        border-radius: 50%;
+        background: radial-gradient(ellipse, oklch(0.97 0.04 290 / 0.40), transparent 65%);
+        pointer-events: none;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        padding: 120px 140px 120px;
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+      }
+
+      .header-band {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 16px;
+        letter-spacing: 0.16em;
+        color: oklch(0.580 0.006 250);
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .title {
+        font-size: 76px;
+        font-weight: 700;
+        letter-spacing: -0.025em;
+        line-height: 1.0;
+        color: oklch(0.200 0.010 250);
+      }
+
+      .subtitle {
+        font-size: 28px;
+        color: oklch(0.540 0.008 250);
+        font-weight: 400;
+        letter-spacing: -0.005em;
+        max-width: 1200px;
+        line-height: 1.4;
+      }
+
+      /* Three-column flow rail */
+      .flow {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 220px 1fr;
+        gap: 28px;
+        align-items: center;
+        margin-top: 20px;
+      }
+
+      .flow-card {
+        background: oklch(1 0 0);
+        border: 1px solid oklch(0.925 0.004 250);
+        border-radius: 18px;
+        padding: 36px 36px;
+        box-shadow: 0 2px 8px rgba(16,18,22,.04), 0 16px 40px rgba(16,18,22,.06);
+        position: relative;
+      }
+
+      .flow-card .label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: oklch(0.580 0.006 250);
+        font-weight: 600;
+        margin-bottom: 18px;
+      }
+
+      .field-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px 16px;
+        background: oklch(0.980 0.003 250);
+        border: 1px solid oklch(0.925 0.004 250);
+        border-radius: 10px;
+        margin-bottom: 10px;
+      }
+
+      .field-row .field-label {
+        font-size: 14px;
+        color: oklch(0.540 0.008 250);
+        font-weight: 500;
+        letter-spacing: 0.02em;
+        min-width: 64px;
+        text-transform: uppercase;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+      }
+
+      .field-row .field-value {
+        font-size: 22px;
+        font-weight: 600;
+        color: oklch(0.200 0.010 250);
+        letter-spacing: -0.005em;
+        font-family: "Inter", system-ui, sans-serif;
+      }
+
+      .field-row.token .field-value {
+        font-family: "JetBrains Mono", monospace;
+        color: oklch(0.620 0.160 258);
+        font-weight: 600;
+        font-size: 19px;
+      }
+
+      /* Boundary column */
+      .boundary {
+        position: relative;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 24px;
+      }
+
+      .boundary-label {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: oklch(0.620 0.160 258);
+        font-weight: 600;
+        text-align: center;
+        line-height: 1.4;
+      }
+
+      .boundary-line {
+        width: 4px;
+        height: 320px;
+        background: linear-gradient(to bottom,
+          transparent 0%,
+          oklch(0.620 0.160 258 / 0.0) 5%,
+          oklch(0.620 0.160 258 / 1.0) 35%,
+          oklch(0.620 0.160 258 / 1.0) 65%,
+          oklch(0.620 0.160 258 / 0.0) 95%,
+          transparent 100%);
+        box-shadow:
+          0 0 24px oklch(0.620 0.160 258 / 0.6),
+          0 0 64px oklch(0.620 0.160 258 / 0.35);
+        position: relative;
+      }
+
+      .boundary-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: oklch(0.620 0.160 258);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 30px;
+        font-weight: 700;
+        box-shadow:
+          0 0 0 6px oklch(0.620 0.160 258 / 0.18),
+          0 0 0 16px oklch(0.620 0.160 258 / 0.08),
+          0 12px 32px oklch(0.620 0.160 258 / 0.4);
+        font-family: "JetBrains Mono", monospace;
+      }
+
+      /* Particle that travels the boundary */
+      .particle {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: oklch(0.620 0.160 258);
+        box-shadow:
+          0 0 12px oklch(0.620 0.160 258 / 0.9),
+          0 0 28px oklch(0.620 0.160 258 / 0.5);
+      }
+
+      /* Source / target pill */
+      .source-card {
+        border-color: oklch(0.620 0.200 25 / 0.25);
+      }
+      .source-card .label {
+        color: oklch(0.620 0.200 25);
+      }
+      .target-card {
+        border-color: oklch(0.620 0.130 155 / 0.25);
+      }
+      .target-card .label {
+        color: oklch(0.620 0.130 155);
+      }
+
+      .footer {
+        position: absolute;
+        bottom: 64px;
+        left: 140px;
+        right: 140px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 14px;
+        letter-spacing: 0.04em;
+        color: oklch(0.580 0.006 250);
+        border-top: 1px solid oklch(0.955 0.003 250);
+        padding-top: 18px;
+      }
+
+      .footer .left { display: flex; gap: 18px; align-items: center; }
+      .footer .pill {
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: oklch(0.955 0.035 258);
+        color: oklch(0.620 0.160 258);
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      /* Initial visibility — set on stage so first frame matches end-state for "from" tweens */
+      #flow-cards { opacity: 1; }
+      .field-row { opacity: 1; }
+      .particle { opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div
+      id="stage"
+      data-composition-id="phi-boundary"
+      data-start="0"
+      data-duration="9"
+      data-width="1920"
+      data-height="1080"
+    >
+      <div class="glow-bg-1"></div>
+      <div class="glow-bg-2"></div>
+
+      <div class="scene">
+        <div class="header-band" id="brand-band">AEDIS · PHI TOKENIZATION BOUNDARY</div>
+
+        <div class="title" id="main-title">PHI never crosses the boundary.</div>
+        <div class="subtitle" id="sub-title">
+          Resident records are tokenized at the MCP gateway. The model sees opaque session-scoped tokens —
+          never names, MRNs, or DOBs.
+        </div>
+
+        <div class="flow" id="flow-cards">
+          <!-- LEFT: Source PHI from PCC -->
+          <div class="flow-card source-card" id="card-source">
+            <div class="label">From PCC · Ensign VPC</div>
+            <div class="field-row" id="row-name">
+              <div class="field-label">Name</div>
+              <div class="field-value">Margaret Chen</div>
+            </div>
+            <div class="field-row" id="row-mrn">
+              <div class="field-label">MRN</div>
+              <div class="field-value">MRN-0488217</div>
+            </div>
+            <div class="field-row" id="row-dob">
+              <div class="field-label">DOB</div>
+              <div class="field-value">1948-03-17</div>
+            </div>
+            <div class="field-row" id="row-room">
+              <div class="field-label">Room</div>
+              <div class="field-value">Bayview · 247</div>
+            </div>
+          </div>
+
+          <!-- MIDDLE: Boundary -->
+          <div class="boundary">
+            <div class="boundary-label" id="boundary-label">MCP gateway<br/>tokenize · scope · log</div>
+            <div style="position: relative; height: 320px; display: flex; align-items: center; justify-content: center;">
+              <div class="boundary-line" id="boundary-line"></div>
+              <div class="particle" id="particle-1" style="left: -6px; top: 0;"></div>
+              <div class="particle" id="particle-2" style="left: -6px; top: 0;"></div>
+              <div class="particle" id="particle-3" style="left: -6px; top: 0;"></div>
+              <div class="particle" id="particle-4" style="left: -6px; top: 0;"></div>
+            </div>
+            <div class="boundary-icon" id="boundary-icon">⛨</div>
+          </div>
+
+          <!-- RIGHT: Tokenized payload to model -->
+          <div class="flow-card target-card" id="card-target">
+            <div class="label">To Anthropic · BAA</div>
+            <div class="field-row token" id="row-name-tok">
+              <div class="field-label">Name</div>
+              <div class="field-value">[NAME_a1b2_0001]</div>
+            </div>
+            <div class="field-row token" id="row-mrn-tok">
+              <div class="field-label">MRN</div>
+              <div class="field-value">[ID_a1b2_0042]</div>
+            </div>
+            <div class="field-row token" id="row-dob-tok">
+              <div class="field-label">DOB</div>
+              <div class="field-value">[DATE_a1b2_0011]</div>
+            </div>
+            <div class="field-row token" id="row-room-tok">
+              <div class="field-label">Room</div>
+              <div class="field-value">[LOC_a1b2_0007]</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <div class="left">
+            <span class="pill">Phase 1</span>
+            <span>Anthropic Managed Agents under signed BAA</span>
+          </div>
+          <div>HIPAA §164.502(d)</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Deterministic — no Math.random, no Date.now
+      window.__timelines = window.__timelines || {};
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } });
+
+      // --- Phase 1: Title in (0 → 1.0)
+      tl.from("#brand-band", { opacity: 0, y: -8, duration: 0.5 }, 0);
+      tl.from("#main-title", { opacity: 0, y: 28, duration: 0.7 }, 0.15);
+      tl.from("#sub-title", { opacity: 0, y: 20, duration: 0.6 }, 0.35);
+
+      // --- Phase 2: Source card in (0.9 → 1.7)
+      tl.from("#card-source", { opacity: 0, x: -40, duration: 0.6 }, 0.9);
+      tl.from("#card-source .field-row", { opacity: 0, x: -20, stagger: 0.08, duration: 0.4 }, 1.05);
+
+      // --- Phase 3: Boundary materializes (1.7 → 2.6)
+      tl.from("#boundary-label", { opacity: 0, y: -8, duration: 0.4 }, 1.7);
+      tl.from("#boundary-line", { scaleY: 0, transformOrigin: "50% 50%", duration: 0.7, ease: "power2.inOut" }, 1.8);
+      tl.from("#boundary-icon", { scale: 0, opacity: 0, duration: 0.5, ease: "back.out(1.7)" }, 2.1);
+
+      // --- Phase 4: Particles flow across the boundary (2.6 → 5.0)
+      // Each particle starts at the source side of the boundary, crosses it, and re-emerges on target side.
+      // We animate y from the top of the line (~ -160px) down past the icon and out the bottom.
+      // Plus a slight x sweep to suggest "left → right" passage through the gateway.
+      const particleAnims = [
+        { sel: "#particle-1", t: 2.6, sourceRow: "#row-name",  targetRow: "#row-name-tok"  },
+        { sel: "#particle-2", t: 2.95, sourceRow: "#row-mrn",   targetRow: "#row-mrn-tok"   },
+        { sel: "#particle-3", t: 3.30, sourceRow: "#row-dob",   targetRow: "#row-dob-tok"   },
+        { sel: "#particle-4", t: 3.65, sourceRow: "#row-room",  targetRow: "#row-room-tok"  },
+      ];
+
+      // Start each target row hidden (cleaner reveal)
+      tl.set("#card-target .field-row", { opacity: 0, x: 18 }, 0);
+      tl.set("#card-target .label", { opacity: 0 }, 0);
+
+      // Reveal target card structure right before particles arrive
+      tl.from("#card-target", { opacity: 0, x: 40, duration: 0.6 }, 2.4);
+      tl.to("#card-target .label", { opacity: 1, duration: 0.4 }, 2.7);
+
+      particleAnims.forEach((p) => {
+        // Particle fades in at the source row, drifts down to icon, then continues to target row
+        // Source row sits left of boundary; target row sits right.
+        // Use a 2-stage tween: enter line → exit line, with the icon as midpoint.
+        tl.fromTo(p.sel,
+          { opacity: 0, x: -24, y: -130 },
+          { opacity: 1, duration: 0.18, ease: "power1.in" }, p.t
+        );
+        // Drift down to icon, accumulating glow
+        tl.to(p.sel, {
+          y: 0,
+          x: 0,
+          duration: 0.4,
+          ease: "power2.in",
+        }, p.t + 0.05);
+        // Pulse on icon contact
+        tl.to("#boundary-icon", {
+          boxShadow:
+            "0 0 0 14px oklch(0.620 0.160 258 / 0.18), 0 0 0 28px oklch(0.620 0.160 258 / 0.08), 0 16px 40px oklch(0.620 0.160 258 / 0.5)",
+          duration: 0.18,
+          yoyo: true,
+          repeat: 1,
+        }, p.t + 0.42);
+        // Continue down and out of the line
+        tl.to(p.sel, {
+          y: 130,
+          x: 24,
+          opacity: 0,
+          duration: 0.42,
+          ease: "power2.out",
+        }, p.t + 0.55);
+        // Reveal target row at the right time
+        tl.to(p.targetRow, {
+          opacity: 1, x: 0,
+          duration: 0.45,
+          ease: "power2.out",
+        }, p.t + 0.65);
+      });
+
+      // --- Phase 5: Final emphasis hold (5.0 → 7.5)
+      // Light pulse on boundary icon to reinforce "this is the boundary"
+      tl.to("#boundary-icon", {
+        scale: 1.06,
+        duration: 0.6,
+        ease: "sine.inOut",
+        yoyo: true,
+        repeat: 1,
+      }, 5.4);
+
+      // Brand-band subtle shift to keep frame alive
+      tl.to("#main-title", {
+        y: -6,
+        duration: 1.0,
+        ease: "sine.inOut",
+      }, 5.4);
+
+      // --- Phase 6: Final hold — let viewers absorb the message (7.5 → 9.0)
+      // Nothing animates; the still frame closes the clip.
+
+      window.__timelines["phi-boundary"] = tl;
+    </script>
+  </body>
+</html>
