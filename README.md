@@ -2,7 +2,7 @@
 
 Internal MARP slide deck + HyperFrames motion clips for Andrew's pitch to Ensign Group's CTO and tech team.
 
-- **Live deck**: <https://goforit5.github.io/aedis-pitch-deck/>
+- **Live deck**: <https://goforit5.github.io/aedis-pitch-deck/> *(after one-time Pages enablement — see [CI / deploy](#ci--deploy) below; the deck is built and ready to ship)*
 - **Source**: [`slides.md`](slides.md)
 - **Theme**: [`assets/theme.css`](assets/theme.css) — Apple HIG, oklch palette matching `revamp/src/tokens.css` in [`goforit5/Aedis`](https://github.com/goforit5/Aedis)
 - **Motion**: [`motion/phi-boundary/index.html`](motion/phi-boundary/index.html) — HyperFrames composition rendering the PHI tokenization boundary clip
@@ -57,6 +57,30 @@ Use mapped fonts (`Inter`, `JetBrains Mono`) for deterministic rendering — see
 2. Builds MARP HTML + PDF
 3. Copies rendered MP4s into `dist/motion/`
 4. Uploads `dist/` as a Pages artifact and deploys to `https://goforit5.github.io/aedis-pitch-deck/`
+
+### One-time Pages enablement
+
+GitHub Pages on a **private** repo requires GitHub **Pro** ($4/mo) or above. On Free tier, Pages only serves from public repos. Andrew has three options:
+
+**Option A — flip this repo to public** (matches `goforit5/Aedis`, which is also public for gh-pages):
+
+```bash
+gh repo edit goforit5/aedis-pitch-deck --visibility public --accept-visibility-change-consequences
+gh api -X POST repos/goforit5/aedis-pitch-deck/pages -f "build_type=workflow"
+git commit --allow-empty -m "chore: trigger first deploy" && git push
+```
+
+**Option B — upgrade to GitHub Pro**, then enable Pages on this private repo:
+
+```bash
+# After upgrading at https://github.com/settings/billing/plans
+gh api -X POST repos/goforit5/aedis-pitch-deck/pages -f "build_type=workflow"
+git commit --allow-empty -m "chore: trigger first deploy" && git push
+```
+
+**Option C — deploy elsewhere** (Vercel / Netlify / Cloudflare Pages support private GitHub deploys on free tiers). Drop a config file matching the chosen vendor and remove `.github/workflows/deploy.yml`.
+
+The workflow YAML is already complete. Whichever option Andrew picks, no code changes are needed — only the Pages enablement step.
 
 ## Audience reference
 
