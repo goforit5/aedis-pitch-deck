@@ -215,23 +215,25 @@ SDK: official <code>@anthropic-ai/sdk</code> — never raw HTTP. Sessions stream
 <!--
 Speaker notes:
 - This is THE slide for credibility. Be precise and honest.
-- Phase 1 today: Managed Agents at platform.claude.com under signed BAA. PHI is tokenized BEFORE it leaves Ensign's network.
+- Phase 1 today: Managed Agents at platform.claude.com under signed BAA. PHI is tokenized at the MCP boundary BEFORE prompts cross the boundary.
 - Phase 2: AWS Bedrock-Managed-Agents in Ensign VPC. PHI never leaves the VPC. Same SDK surface — Anthropic ships it, we redeploy.
-- Anthropic offers a HIPAA BAA. AWS Bedrock is BAA-eligible and HITRUST.
-- Don't promise "Bedrock today" — the audit caught that as a credibility-killer.
+- IMPORTANT correction vs. earlier framing: OCR/vision lives INSIDE the HIPAA boundary (Zone 2). The agent only ever sees tokenized output. See "6 Trust Zones" slides next.
+- Anthropic offers a HIPAA BAA. AWS Bedrock is BAA-eligible.
+- Language: we do NOT claim HIPAA de-identification. We use tokenization as an operational privacy control.
 -->
 
 # PHI handling
-## Phase 1 today · Phase 2 target
+## Phase 1 today · Phase 2 target · tokenized by default
 
 <div class="grid cols-2">
   <div class="card">
     <h3 style="margin-top:0">Phase 1 — Today <span style="font-size:11px;color:var(--ink-3);font-weight:400">· Day 0 to ~120</span></h3>
     <ul>
       <li><strong>Anthropic Managed Agents</strong> under signed BAA</li>
-      <li><strong>PHI tokenized at the MCP gateway</strong> — names, MRNs, DOBs, rooms replaced with session-scoped tokens before any prompt is built</li>
-      <li>De-id map lives in Ensign-controlled Postgres; tokens UUID-prefixed, session-scoped, no cross-session leakage</li>
-      <li>Anthropic sees <code>[NAME_a1b2_0001]</code>, never <em>Margaret Chen</em></li>
+      <li><strong>OCR and vision run inside the HIPAA boundary</strong> (Zone 2); only tokenized output crosses to the agent</li>
+      <li><strong>Tokenized at the MCP gateway</strong> — names, MRNs, DOBs, rooms replaced with tenant-scoped HMAC tokens before any prompt is built</li>
+      <li>Token vault lives in Ensign-controlled Postgres; tokens are session-scoped, tenant-scoped, key-versioned, no cross-session leakage</li>
+      <li>Anthropic sees <code>resident_tok_7J4K9Q</code>, never <em>Margaret Chen</em></li>
     </ul>
   </div>
   <div class="card" style="border-color: var(--accent)">
@@ -240,7 +242,7 @@ Speaker notes:
       <li><strong>Bedrock-Managed-Agents</strong> in Ensign's AWS VPC</li>
       <li>PHI <strong>never leaves the VPC</strong> — inference colocated with data</li>
       <li>Migration is a runtime swap, not a rewrite — same SDK surface</li>
-      <li>Tokenization stays on as defense-in-depth</li>
+      <li>Tokenization stays on as defense-in-depth (privacy-preserving by default)</li>
     </ul>
   </div>
 </div>
@@ -248,7 +250,430 @@ Speaker notes:
 <video class="motion" src="motion/phi-boundary.mp4" poster="motion/phi-boundary-poster.jpg" autoplay muted loop playsinline preload="auto"></video>
 
 <div class="citations">
-HIPAA §164.502(d) de-identification · §164.314(a) BAA requirements · Anthropic Trust Center · AWS Bedrock HIPAA eligibility
+HIPAA §164.502(b) minimum necessary · §164.314(a) BAA requirements · §164.312(e)(1) transmission security · Anthropic Trust Center · AWS Bedrock HIPAA eligibility
+</div>
+
+---
+
+<!-- _class: content -->
+<!--
+Speaker notes:
+- Overview of the 6 trust zones. Set up the next 4 slides.
+- Lead with: "the agent literally cannot see Margaret Chen's name even by mistake — here's the boundary that makes that true."
+- Each zone has a different trust posture, a different actor set, and a different audit policy.
+- Zones 1-2 are the HIPAA boundary. Zones 3-4 are tokenized-only. Zone 5 is the agent's reality. Zone 6 is the human's reality.
+-->
+
+# 6 Trust Zones
+## Where data lives, who can read it, what crosses the line
+
+<div class="arch">
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--red)">Zone 1</div>
+    <div class="layer-content">
+      <span class="pill red">Raw PHI Vault</span>
+      <span class="pill ink">scanned PDFs · DICOM · faxed orders · raw HL7/CDA</span>
+      <span class="pill ink">readers: vault service only</span>
+      <span class="pill ink">KMS CMK · VPC endpoint · no agent access</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--amber)">Zone 2</div>
+    <div class="layer-content">
+      <span class="pill amber">HIPAA OCR / Vision</span>
+      <span class="pill ink">AWS Textract · Bedrock vision (in-VPC)</span>
+      <span class="pill ink">readers: ocr-service identity only</span>
+      <span class="pill ink">no prompt logging with raw PHI</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--violet)">Zone 3</div>
+    <div class="layer-content">
+      <span class="pill violet">Token Vault</span>
+      <span class="pill ink">resident_tok ↔ raw_mrn map · HMAC(tenant, facility, src, mrn)</span>
+      <span class="pill ink">readers: rehydration service · break-glass auditor</span>
+      <span class="pill ink">key-versioned · TTL 24h · rotated on session close</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--violet)">Zone 4</div>
+    <div class="layer-content">
+      <span class="pill violet">Tokenized Doc Store</span>
+      <span class="pill ink">OCR text + layout · tables · forms · confidence — PHI replaced with tokens</span>
+      <span class="pill ink">readers: any agent or human under RBAC</span>
+      <span class="pill ink">no raw names · no raw MRNs · no DOBs</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--green)">Zone 5</div>
+    <div class="layer-content">
+      <span class="pill green">Agent Workspace</span>
+      <span class="pill ink">Managed Agents · Bedrock agents</span>
+      <span class="pill ink">readers: agent (tokenized-only) · server-enforced tool allowlist</span>
+      <span class="pill ink">prompts and tool calls cited in audit chain</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--accent)">Zone 6</div>
+    <div class="layer-content">
+      <span class="pill accent">Rehydration + Audit Replay</span>
+      <span class="pill ink">tokens → cleartext for authorized humans only</span>
+      <span class="pill ink">readers: human under RBAC + purpose-of-use + MFA</span>
+      <span class="pill ink">every rehydration logged · replayable per decision</span>
+    </div>
+  </div>
+</div>
+
+<div class="footnote">
+Zones 1–2 are the HIPAA boundary (raw PHI lives here, agents never enter). Zones 3–5 are tokenized-only. Zone 6 is where authorized humans see cleartext under audit.
+</div>
+
+<div class="citations">
+HIPAA §164.502(b) minimum necessary · §164.308(a)(4) information access management · NIST SP 800-53 AC-3 · AC-6 least privilege · SC-28 protection at rest
+</div>
+
+---
+
+<!-- _class: content -->
+<!--
+Speaker notes:
+- THE correction slide. The earlier Aedis story implied "tokenize → then AI." Wrong.
+- PHI is trapped in pixels until OCR runs. So OCR must run INSIDE the HIPAA boundary, not outside it.
+- Textract + Bedrock vision execute in-VPC under BAA. Output: structured tokens + redacted layout.
+- The agent gets the tokenized output, not the original document.
+- The agent literally cannot see Margaret Chen's name even if it asked — there is no tool path.
+-->
+
+# Why OCR lives inside the PHI boundary
+## PHI is trapped in pixels until OCR runs
+
+<div class="grid cols-2">
+  <div class="card" style="border-color: var(--red)">
+    <h3 style="margin-top:0;color:var(--red)">The naive design (wrong)</h3>
+    <ol>
+      <li>Upload scanned admission packet to S3</li>
+      <li>Hand the PDF to an LLM and "ask it to tokenize"</li>
+      <li>Trust the model to redact</li>
+    </ol>
+    <p style="font-size:13px;color:var(--ink-3);margin:8px 0 0"><strong>Failure mode:</strong> the LLM has already <em>read</em> the PHI to redact it. PHI has crossed the boundary. There is no undo.</p>
+  </div>
+  <div class="card" style="border-color: var(--green)">
+    <h3 style="margin-top:0;color:var(--green)">Aedis design (Zone 2)</h3>
+    <ol>
+      <li>Raw doc lands in Zone 1 vault — encrypted at rest, no agent reachable</li>
+      <li><strong>Inside the HIPAA boundary</strong>, ocr-service calls AWS Textract (BAA-covered) for structured text + layout + tables + forms + confidence</li>
+      <li>Where confidence is low or vision is required (handwriting, signatures, stamps), <strong>Bedrock vision runs in the same VPC</strong> — no prompt logging that includes PHI</li>
+      <li>PHI scanner sweeps the OCR output, tokenizes detected entities, writes to Zone 4</li>
+      <li>Only the tokenized output (Zone 4) is visible to agents in Zone 5</li>
+    </ol>
+  </div>
+</div>
+
+<div class="row" style="margin-top:16px">
+  <span class="pill ink">Textract (BAA)</span>
+  <span class="pill ink">Bedrock vision (in-VPC)</span>
+  <span class="pill ink">PHI scanner: NAME · MRN · DOB · ADDR · PHONE · EMAIL · SSN · ACCT</span>
+  <span class="pill green">Agent prompt contains zero raw PHI</span>
+</div>
+
+<div class="citations">
+HIPAA §164.312(a)(1) access control · §164.312(b) audit controls · §164.312(c)(1) integrity · AWS Textract HIPAA eligibility · Bedrock HIPAA eligibility
+</div>
+
+---
+
+<!-- _class: content -->
+<!--
+Speaker notes:
+- The compliance language slide. Read this one slowly. Be precise.
+- We do NOT claim HIPAA de-identification (Safe Harbor or Expert Determination). Those are formal processes we have not pursued.
+- We DO claim tokenization as an operational privacy control. It is defensible, auditable, and least-privilege.
+- Tokens are tenant-scoped HMACs — not plain hashes — so they cannot be brute-forced across tenants.
+- This slide is the answer to "how is this different from de-id" — it's not de-id, it's a different control with a different posture.
+-->
+
+# Tokenization, not de-identification
+## Precise compliance language
+
+<div class="grid cols-2">
+  <div class="card" style="border-color: var(--red)">
+    <h3 style="margin-top:0;color:var(--red)">We do NOT claim</h3>
+    <ul>
+      <li>HIPAA Safe Harbor de-identification under §164.514(b)(2)</li>
+      <li>Expert Determination de-identification under §164.514(b)(1)</li>
+      <li>"Bulletproof", "HIPAA-certified", or any superlative</li>
+      <li>That tokenized data is outside the HIPAA Privacy Rule scope</li>
+    </ul>
+  </div>
+  <div class="card" style="border-color: var(--green)">
+    <h3 style="margin-top:0;color:var(--green)">We DO claim</h3>
+    <ul>
+      <li><strong>Tokenization as an operational privacy control</strong> — least-privilege, BAA-covered, auditable</li>
+      <li><strong>Tenant-scoped HMAC tokens</strong> — <code>HMAC_SHA256(tenant_secret, facility_id + source_system + raw_mrn)</code></li>
+      <li>Tokens are not reversible without rehydration service access (Zone 3 break-glass)</li>
+      <li>Every rehydration is logged with actor, purpose-of-use, MFA factor, and decision context</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px;border-color: var(--ink-4);background: var(--bg-sunk)">
+  <p style="margin:0;font-size:14px;color:var(--ink-2);line-height:1.5">
+    <strong>For the record:</strong> "We do not claim de-identification under HIPAA. We use tokenization as our operational privacy control. De-identification is a separate compliance determination we have not pursued."
+  </p>
+</div>
+
+<div class="citations">
+HIPAA §164.514(a)–(b) de-identification standards · §164.502(d) de-identification permitted uses · NIST SP 800-188 de-identification guidance · OCR FAQ on de-identification
+</div>
+
+---
+
+<!-- _class: content -->
+<!--
+Speaker notes:
+- Two modes. Default is Mode A — tokenized text, cheap, fast, safe. 95%+ of decisions.
+- Mode B — PHI-bound vision — escalates only when (a) confidence < threshold, (b) vision required (signature, stamp, handwriting), (c) human reviewer asks for the raw doc.
+- Mode B runs in-VPC. No prompt logging that includes PHI. Output is still tokenized before it returns to the agent.
+- The audience question: "how do you decide which mode?" → next slide (confidence routing).
+-->
+
+# Two AI modes
+## Tokenized-text by default · PHI-bound vision on escalation
+
+<div class="grid cols-2">
+  <div class="card" style="border-color: var(--green)">
+    <h3 style="margin-top:0;color:var(--green)">Mode A — Tokenized-text agent (default)</h3>
+    <ul>
+      <li>Runs in Zone 5 (Anthropic Managed Agents under BAA in Phase 1; Bedrock in-VPC in Phase 2)</li>
+      <li>Input: tokenized OCR output from Zone 4 — zero raw PHI</li>
+      <li>Output: tokenized decision proposal with cited evidence tokens</li>
+      <li>Use cases: AP coding, invoice reconciliation, claim appeal drafting, schedule analysis, policy lookup</li>
+      <li><strong>~95% of decisions resolve here</strong></li>
+    </ul>
+  </div>
+  <div class="card" style="border-color: var(--amber)">
+    <h3 style="margin-top:0;color:var(--amber)">Mode B — PHI-bound vision agent (escalation)</h3>
+    <ul>
+      <li>Runs <strong>inside the HIPAA boundary</strong> (Bedrock vision in-VPC under BAA)</li>
+      <li>Input: raw document pixels from Zone 1 (signature blocks, handwriting, stamps, complex layouts)</li>
+      <li>No prompt logging that includes PHI · output tokenized before return to Zone 5</li>
+      <li>Use cases: signature verification, handwritten progress notes, ID badge OCR fallback, complex form vision</li>
+      <li><strong>Escalation only · always dual-approval HITL · governance level 5</strong></li>
+    </ul>
+  </div>
+</div>
+
+<div class="footnote">
+The agent doesn't choose its mode. The confidence router does — see next slide.
+</div>
+
+<div class="citations">
+HIPAA §164.312(a)(1) access control · §164.312(b) audit controls · §164.502(b) minimum necessary · Bedrock HIPAA eligibility · Anthropic BAA
+</div>
+
+---
+
+<!-- _class: content -->
+<!--
+Speaker notes:
+- Confidence routing. The CTO will care about: "how do you decide which path?"
+- Green: deterministic auto. Textract confidence > 0.95, schema validates, no PHI ambiguity → tokenized agent, single-approval HITL.
+- Yellow: tokenized LLM normalizer. Textract 0.80–0.95, schema partial, ambiguous entity. Mode A normalizes, still HITL.
+- Red: Bedrock vision escalation. Textract < 0.80, signature/handwriting required, human asks for raw view. Mode B, dual-approval HITL.
+- This is the same routing pattern as the existing decision queue green/amber/red — but for the data path, not just the action.
+-->
+
+# Confidence routing
+## Green deterministic · Yellow tokenized LLM · Red PHI-bound vision
+
+<div class="grid cols-3">
+  <div class="card" style="border-color: var(--green)">
+    <h3 style="margin-top:0;color:var(--green)">Green — deterministic</h3>
+    <p style="font-size:13px;color:var(--ink-3);margin:0 0 8px"><code>textract.confidence &gt; 0.95</code> · schema validates · no PHI ambiguity</p>
+    <ul>
+      <li>Auto-tokenize, hand to Mode A</li>
+      <li>Single-approval HITL · governance level 4</li>
+      <li>Audit row written, downstream agents notified</li>
+    </ul>
+  </div>
+  <div class="card" style="border-color: var(--amber)">
+    <h3 style="margin-top:0;color:var(--amber)">Yellow — tokenized LLM</h3>
+    <p style="font-size:13px;color:var(--ink-3);margin:0 0 8px"><code>0.80 ≤ confidence ≤ 0.95</code> · schema partial · ambiguous entities</p>
+    <ul>
+      <li>Mode A normalizer (tokenized text only)</li>
+      <li>Single-approval HITL with normalizer trace</li>
+      <li>If normalizer fails twice → escalate to red</li>
+    </ul>
+  </div>
+  <div class="card" style="border-color: var(--red)">
+    <h3 style="margin-top:0;color:var(--red)">Red — PHI-bound vision</h3>
+    <p style="font-size:13px;color:var(--ink-3);margin:0 0 8px"><code>confidence &lt; 0.80</code> · signature / handwriting / human request</p>
+    <ul>
+      <li>Mode B vision (in-VPC, no PHI logging)</li>
+      <li>Dual-approval HITL · governance level 5</li>
+      <li>Auditor co-signs · full chain replayable</li>
+    </ul>
+  </div>
+</div>
+
+<div class="footnote">
+The router itself is deterministic and inspectable in the audit chain. No model decides whether PHI escapes the boundary — policy does.
+</div>
+
+<div class="citations">
+HIPAA §164.312(a)(1) access control · §164.308(a)(4) information access management · NIST SP 800-53 AC-3 · §164.312(b) audit controls
+</div>
+
+---
+
+<!-- _class: content -->
+<!--
+Speaker notes:
+- Live demo moment 1 of 3. Cue to flip from raw to tokenized in the running app.
+- The tokenized-view toggle is in the ControlBar top-right (shield icon, role="switch", aria-checked).
+- The decision recommendation text is IDENTICAL between modes — proving the agent never saw the name to begin with.
+-->
+
+# Live demo · Patient Safety toggle
+## Margaret Chen → resident_tok_7J4K9Q
+
+<div class="grid cols-2">
+  <div class="card">
+    <h3 style="margin-top:0">What the human sees</h3>
+    <div class="stack">
+      <div><span class="pill amber">PHI · cleartext</span></div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink-1)">Margaret Chen · Bayview · Rm 247</div>
+      <div style="font-size:13px;color:var(--ink-3);line-height:1.45">MRN 18477392 · DOB 1948-03-14 · POA Susan Chen</div>
+    </div>
+  </div>
+  <div class="card" style="border-color: var(--green)">
+    <h3 style="margin-top:0;color:var(--green)">What the agent sees</h3>
+    <div class="stack">
+      <div><span class="pill green">tokenized</span></div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink-1)"><code>resident_tok_7J4K9Q</code> · <code>facility_tok_BV</code> · <code>room_tok_247</code></div>
+      <div style="font-size:13px;color:var(--ink-3);line-height:1.45"><code>mrn_tok_B8Z1P2</code> · <code>dob_tok_3FD9A1</code> · <code>poa_tok_44KQ8L</code></div>
+    </div>
+  </div>
+</div>
+
+<div class="footnote">
+The decision recommendation reads identically in both modes. The agent's prompt contained zero raw PHI to begin with — the toggle just changes what the human reviewer sees.
+</div>
+
+---
+
+<!-- _class: content -->
+<!--
+Speaker notes:
+- Live demo moment 2 of 3. Audit Replay swimlane for D-4822.
+- Six zones, one decision, one chain. Shows every actor, every payload hash, every tool call, every egress.
+- Audience sees: raw doc landed in Zone 1 (hash only, no readable content), OCR detected NAME:2, MRN:1, DOB:1, tokens created, agent prompt visible (no names in it), tools called from the allowlist, human approval event, redacted Workday payload egress.
+-->
+
+# Live demo · Audit Replay
+## 6-zone swimlane for Decision D-4822
+
+<div class="arch">
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--red)">Zone 1</div>
+    <div class="layer-content">
+      <span class="pill red">raw_doc.received</span>
+      <span class="pill ink">actor: vault-service</span>
+      <span class="pill ink">sha256: 9a7c…b2e1</span>
+      <span class="pill ink">size: 312 KB · pages: 4</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--amber)">Zone 2</div>
+    <div class="layer-content">
+      <span class="pill amber">ocr.extracted</span>
+      <span class="pill ink">actor: ocr-service</span>
+      <span class="pill ink">phi_entities: {NAME:2, MRN:1, DOB:1}</span>
+      <span class="pill ink">policy: tokpol_2026_05</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--violet)">Zone 3</div>
+    <div class="layer-content">
+      <span class="pill violet">tokens.created</span>
+      <span class="pill ink">resident_tok_7J4K9Q · mrn_tok_B8Z1P2 · dob_tok_3FD9A1</span>
+      <span class="pill ink">key_version: v3</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--violet)">Zone 4</div>
+    <div class="layer-content">
+      <span class="pill violet">tokenized_doc.stored</span>
+      <span class="pill ink">doc_id: tdoc_4F2A · contains zero raw PHI</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--green)">Zone 5</div>
+    <div class="layer-content">
+      <span class="pill green">agent.prompt_built</span>
+      <span class="pill ink">agent: ClinicalMonitor-v12</span>
+      <span class="pill ink">prompt_sha256: 4c1d…8a92</span>
+      <span class="pill ink">tools_called: search_tokenized_invoices, propose_appeal_draft</span>
+    </div>
+  </div>
+  <div class="arch-row">
+    <div class="layer-label" style="color:var(--accent)">Zone 6</div>
+    <div class="layer-content">
+      <span class="pill accent">human.rehydrated</span>
+      <span class="pill ink">actor: don-bayview · MFA: webauthn</span>
+      <span class="pill ink">purpose: appeal_review · minimum_necessary: true</span>
+      <span class="pill ink">egress: workday.expense_create (tokenized)</span>
+    </div>
+  </div>
+</div>
+
+<div class="footnote">
+Every row above is a real audit event with a content hash linking to the previous row. The chain is monotonically ordered, advisory-locked per tenant, and verifier-replayable end-to-end.
+</div>
+
+---
+
+<!-- _class: content -->
+<!--
+Speaker notes:
+- Live demo moment 3 of 3. Agent Inspector Tool Permissions tab.
+- This is the "the agent has no tool that can leak PHI even if it tried" proof.
+- Allowed: search_tokenized_invoices, compare_invoice_to_contract, propose_gl_code, request_rehydration_for_human_review.
+- Forbidden: display_mrn, display_patient_name, read_phi_vault, decrypt_raw_document. Server-enforced, not UI-enforced.
+-->
+
+# Live demo · Agent Inspector — Tool Permissions
+## The agent has no tool that can leak PHI
+
+<div class="grid cols-2">
+  <div class="card" style="border-color: var(--green)">
+    <h3 style="margin-top:0;color:var(--green)">Allowed tools (Clinical Monitor)</h3>
+    <ul>
+      <li><code>search_tokenized_invoices</code></li>
+      <li><code>compare_invoice_to_contract</code></li>
+      <li><code>propose_gl_code</code></li>
+      <li><code>request_rehydration_for_human_review</code></li>
+      <li><code>draft_appeal_letter</code> (tokenized output)</li>
+    </ul>
+  </div>
+  <div class="card" style="border-color: var(--red)">
+    <h3 style="margin-top:0;color:var(--red)">Forbidden tools (server-enforced)</h3>
+    <ul style="list-style:none;padding-left:0">
+      <li><span style="text-decoration:line-through;color:var(--red)"><code>display_mrn</code></span></li>
+      <li><span style="text-decoration:line-through;color:var(--red)"><code>display_patient_name</code></span></li>
+      <li><span style="text-decoration:line-through;color:var(--red)"><code>read_phi_vault</code></span></li>
+      <li><span style="text-decoration:line-through;color:var(--red)"><code>decrypt_raw_document</code></span></li>
+      <li><span style="text-decoration:line-through;color:var(--red)"><code>egress_to_unscoped_endpoint</code></span></li>
+    </ul>
+  </div>
+</div>
+
+<div class="footnote">
+Enforcement lives in the MCP gateway, not the agent. The agent literally has no path to the forbidden tools — they are not registered in its session manifest.
+</div>
+
+<div class="citations">
+HIPAA §164.308(a)(4) information access management · §164.312(a)(1) access control · NIST SP 800-53 AC-6 least privilege · AC-3 access enforcement
 </div>
 
 ---
@@ -487,11 +912,13 @@ Speaker notes:
 <tr><td>HITRUST CSF r2</td><td><span class="pill ink">Roadmap</span></td><td>Year 2</td><td>Path mapped, prerequisites in SOC 2 controls.</td></tr>
 <tr><td>NIST SP 800-66r2</td><td><span class="pill green">Aligned</span></td><td>Today</td><td>Risk assessment & controls mapped to HIPAA Security Rule.</td></tr>
 <tr><td>Privacy Policy / ToS</td><td><span class="pill green">Published</span></td><td>Today</td><td>aedis.health (target) · current at goforit5.github.io/Aedis</td></tr>
+<tr><td>Token lifecycle policy</td><td><span class="pill green">Codified</span></td><td>Today</td><td>Session-scoped · 24h TTL · tenant-HMAC derivation · KMS key versioning · rotated on session close</td></tr>
+<tr><td>Role-based evidence visibility</td><td><span class="pill green">Codified</span></td><td>Today</td><td>Agents see tokens always · humans see per RBAC + purpose-of-use + MFA · both paths audited</td></tr>
 </tbody>
 </table>
 
 <div class="citations">
-HIPAA Security Rule §164.306–§164.318 · HHS audit protocol · AICPA TSC 2017 · HITRUST CSF v11
+HIPAA Security Rule §164.306–§164.318 · HHS audit protocol · AICPA TSC 2017 · NIST SP 800-66r2
 </div>
 
 ---
